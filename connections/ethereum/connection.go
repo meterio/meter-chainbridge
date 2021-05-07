@@ -5,9 +5,12 @@ package ethereum
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"net/http"
 	"sync"
 	"time"
 
@@ -22,6 +25,18 @@ import (
 
 var BlockRetryInterval = time.Second * 5
 
+type GasNowData struct {
+	Rapid     string `json:"rapid"`
+	Fast      string `json:"fast"`
+	Standard  string `json:"standard"`
+	Slow      string `json:"slow"`
+	Timestamp uint64 `json:"timestamp"`
+}
+
+type GasNowResult struct {
+	Code int        `json:"code"`
+	Data GasNowData `json:"data"`
+}
 type Connection struct {
 	endpoint      string
 	http          bool
@@ -126,7 +141,49 @@ func (c *Connection) CallOpts() *bind.CallOpts {
 }
 
 func (c *Connection) SafeEstimateGas(ctx context.Context) (*big.Int, error) {
+	url := "https://www.gasnow.org/api/v3/gas/price?utm_source=meter"
+	client := http.Client{Timeout: time.Second * 2}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		fmt.Println("gasNow create request error", err)
+	} else {
+		res, getErr := client.Do(req)
+		if getErr != nil {
+			// do something
+			fmt.Println("gasNow API get error", getErr)
+		} else {
+			if res.Body != nil {
+				defer res.Body.Close()
+			}
 
+			body, readErr := ioutil.ReadAll(res.Body)
+			if readErr != nil {
+				// do something
+				fmt.Println("gasNow API read error", readErr)
+			} else {
+				result := GasNowResult{}
+				jsonErr := json.Unmarshal(body, &result)
+				if jsonErr != nil {
+					// do something
+					fmt.Println("gasNow json decode error", jsonErr)
+				} else {
+					fmt.Println("Using gas price from GasNow API: ", result.Data.Fast)
+					gasPrice := new(big.Int)
+					gasPrice, ok := gasPrice.SetString(result.Data.Fast, 10)
+
+					if ok {
+						if gasPrice.Cmp(c.maxGasPrice) == 1 {
+							fmt.Println("Using gas price from GasNow API (limited by max gas price): ", c.maxGasPrice)
+							return c.maxGasPrice, nil
+						} else {
+							fmt.Println("Using gas price from GasNow API: ", gasPrice)
+							return gasPrice, nil
+						}
+					}
+				}
+			}
+		}
+	}
 	suggestedGasPrice, err := c.conn.SuggestGasPrice(context.TODO())
 
 	if err != nil {
@@ -137,8 +194,10 @@ func (c *Connection) SafeEstimateGas(ctx context.Context) (*big.Int, error) {
 
 	// Check we aren't exceeding our limit
 	if gasPrice.Cmp(c.maxGasPrice) == 1 {
+		fmt.Println("Using gas price (limited by max gas price): ", c.maxGasPrice)
 		return c.maxGasPrice, nil
 	} else {
+		fmt.Println("Using gas price: ", gasPrice)
 		return gasPrice, nil
 	}
 }
