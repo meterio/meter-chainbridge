@@ -26,10 +26,10 @@ import (
 var BlockRetryInterval = time.Second * 5
 
 type GasNowData struct {
-	Rapid     string `json:"rapid"`
-	Fast      string `json:"fast"`
-	Standard  string `json:"standard"`
-	Slow      string `json:"slow"`
+	Rapid     uint64 `json:"rapid"`
+	Fast      uint64 `json:"fast"`
+	Standard  uint64 `json:"standard"`
+	Slow      uint64 `json:"slow"`
 	Timestamp uint64 `json:"timestamp"`
 }
 
@@ -143,35 +143,35 @@ func (c *Connection) CallOpts() *bind.CallOpts {
 func (c *Connection) SafeEstimateGas(ctx context.Context) (*big.Int, error) {
 	url := "https://www.gasnow.org/api/v3/gas/price?utm_source=meter"
 	client := http.Client{Timeout: time.Second * 2}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		fmt.Println("gasNow create request error", err)
-	} else {
-		res, getErr := client.Do(req)
-		if getErr != nil {
-			// do something
-			fmt.Println("gasNow API get error", getErr)
+	chainID, _ := c.conn.ChainID(ctx)
+	if chainID.Cmp(big.NewInt(1)) == 1 && chainID.Cmp(big.NewInt(5)) == -1 {
+		req, err := http.NewRequest(http.MethodGet, url, nil)
+		if err != nil {
+			fmt.Println("gasNow create request error", err)
 		} else {
-			if res.Body != nil {
-				defer res.Body.Close()
-			}
-
-			body, readErr := ioutil.ReadAll(res.Body)
-			if readErr != nil {
+			res, getErr := client.Do(req)
+			if getErr != nil {
 				// do something
-				fmt.Println("gasNow API read error", readErr)
+				fmt.Println("gasNow API get error", getErr)
 			} else {
-				result := GasNowResult{}
-				jsonErr := json.Unmarshal(body, &result)
-				if jsonErr != nil {
-					// do something
-					fmt.Println("gasNow json decode error", jsonErr)
-				} else {
-					fmt.Println("Using gas price from GasNow API: ", result.Data.Fast)
-					gasPrice := new(big.Int)
-					gasPrice, ok := gasPrice.SetString(result.Data.Fast, 10)
+				if res.Body != nil {
+					defer res.Body.Close()
+				}
 
-					if ok {
+				body, readErr := ioutil.ReadAll(res.Body)
+				if readErr != nil {
+					// do something
+					fmt.Println("gasNow API read error", readErr)
+				} else {
+					result := GasNowResult{}
+					jsonErr := json.Unmarshal(body, &result)
+					if jsonErr != nil {
+						// do something
+						fmt.Println("gasNow json decode error", jsonErr)
+					} else {
+						fmt.Println("Using gas price from GasNow API: ", result.Data.Fast)
+						gasPrice := big.NewInt(int64(result.Data.Fast))
+
 						if gasPrice.Cmp(c.maxGasPrice) == 1 {
 							fmt.Println("Using gas price from GasNow API (limited by max gas price): ", c.maxGasPrice)
 							return c.maxGasPrice, nil
