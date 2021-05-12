@@ -144,7 +144,7 @@ func (c *Connection) SafeEstimateGas(ctx context.Context) (*big.Int, error) {
 	url := "https://www.gasnow.org/api/v3/gas/price?utm_source=meter"
 	client := http.Client{Timeout: time.Second * 2}
 	chainID, _ := c.conn.ChainID(ctx)
-	if chainID.Cmp(big.NewInt(1)) == 1 && chainID.Cmp(big.NewInt(5)) == -1 {
+	if chainID.Cmp(big.NewInt(1)) >= 0 && chainID.Cmp(big.NewInt(5)) == -1 {
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
 			fmt.Println("gasNow create request error", err)
