@@ -33,6 +33,8 @@ type GasNowData struct {
 	Timestamp uint64 `json:"timestamp"`
 }
 
+var gasNowDataCache *GasNowData = nil
+
 type GasNowResult struct {
 	Code int        `json:"code"`
 	Data GasNowData `json:"data"`
@@ -140,11 +142,41 @@ func (c *Connection) CallOpts() *bind.CallOpts {
 	return c.callOpts
 }
 
+// we can use cache less than 2 seconds, in case of batch call
+func (c *Connection) useGasNowDataCache() bool {
+	if gasNowDataCache == nil {
+		return false
+	}
+
+	if (uint64(time.Now().Unix()) >= gasNowDataCache.Timestamp) &&
+		(uint64(time.Now().Unix())-gasNowDataCache.Timestamp <= 2) {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (c *Connection) setGasNowDataCache(data *GasNowData) {
+	gasNowDataCache = &GasNowData{
+		Rapid:     data.Rapid,
+		Fast:      data.Fast,
+		Standard:  data.Standard,
+		Slow:      data.Slow,
+		Timestamp: data.Timestamp,
+	}
+}
+
 func (c *Connection) SafeEstimateGas(ctx context.Context) (*big.Int, error) {
 	url := "https://www.gasnow.org/api/v3/gas/price?utm_source=meter"
 	client := http.Client{Timeout: time.Second * 2}
 	chainID, _ := c.conn.ChainID(ctx)
-	if chainID.Cmp(big.NewInt(1)) >= 0 && chainID.Cmp(big.NewInt(5)) == -1 {
+	if chainID.Cmp(big.NewInt(1)) == 0 {
+		if c.useGasNowDataCache() == true {
+			gasPrice := big.NewInt(int64((gasNowDataCache.Fast + gasNowDataCache.Rapid) / 2))
+			fmt.Println("Using gas price from gasNowDataCache: ", gasPrice.String())
+			return gasPrice, nil
+		}
+
 		req, err := http.NewRequest(http.MethodGet, url, nil)
 		if err != nil {
 			fmt.Println("gasNow create request error", err)
@@ -169,14 +201,15 @@ func (c *Connection) SafeEstimateGas(ctx context.Context) (*big.Int, error) {
 						// do something
 						fmt.Println("gasNow json decode error", jsonErr)
 					} else {
-						fmt.Println("Using gas price from GasNow API: ", result.Data.Fast)
-						gasPrice := big.NewInt(int64(result.Data.Fast))
+						//fmt.Println("Using gas price from GasNow API: ", result.Data.Fast)
+						gasPrice := big.NewInt(int64((result.Data.Fast + result.Data.Rapid) / 2))
+						c.setGasNowDataCache(&result.Data)
 
 						if gasPrice.Cmp(c.maxGasPrice) == 1 {
 							fmt.Println("Using gas price from GasNow API (limited by max gas price): ", c.maxGasPrice)
 							return c.maxGasPrice, nil
 						} else {
-							fmt.Println("Using gas price from GasNow API: ", gasPrice)
+							fmt.Println("Using gas price from GasNow API: ", gasPrice.String())
 							return gasPrice, nil
 						}
 					}
