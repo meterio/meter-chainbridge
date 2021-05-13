@@ -172,7 +172,7 @@ func (c *Connection) SafeEstimateGas(ctx context.Context) (*big.Int, error) {
 	chainID, _ := c.conn.ChainID(ctx)
 	if chainID.Cmp(big.NewInt(1)) == 0 {
 		if c.useGasNowDataCache() == true {
-			gasPrice := big.NewInt(int64((gasNowDataCache.Fast + gasNowDataCache.Rapid) / 2))
+			gasPrice := big.NewInt(int64(gasNowDataCache.Fast + (gasNowDataCache.Rapid - gasNowDataCache.Fast) / 4))
 			fmt.Println("Using gas price from gasNowDataCache: ", gasPrice.String())
 			return gasPrice, nil
 		}
