@@ -15,7 +15,8 @@ import (
 )
 
 // Number of blocks to wait for an finalization event
-const ExecuteBlockWatchLimit = 100
+// change to 200 blocks of expiry from 100 
+const ExecuteBlockWatchLimit = 200          // 100
 
 // Time between retrying a failed tx
 const TxRetryInterval = time.Second * 2
