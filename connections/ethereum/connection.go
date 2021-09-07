@@ -79,7 +79,7 @@ func (c *Connection) Connect() error {
 	if c.http {
 		rpcClient, err = rpc.DialHTTP(c.endpoint)
 	} else {
-		rpcClient, err = rpc.DialWebsocket(context.Background(), c.endpoint, "/ws")
+		rpcClient, err = rpc.DialContext(context.Background(), c.endpoint)
 	}
 	if err != nil {
 		return err
@@ -233,6 +233,38 @@ func (c *Connection) SafeEstimateGas(ctx context.Context) (*big.Int, error) {
 		fmt.Println("Using gas price: ", gasPrice)
 		return gasPrice, nil
 	}
+}
+
+func (c *Connection) EstimateGasLondon(ctx context.Context, baseFee *big.Int) (*big.Int, *big.Int, error) {
+	var maxPriorityFeePerGas *big.Int
+	var maxFeePerGas *big.Int
+
+	if c.maxGasPrice.Cmp(baseFee) < 0 {
+		maxPriorityFeePerGas = big.NewInt(1)
+		maxFeePerGas = new(big.Int).Add(baseFee, maxPriorityFeePerGas)
+		return maxPriorityFeePerGas, maxFeePerGas, nil
+	}
+
+	maxPriorityFeePerGas, err := c.conn.SuggestGasTipCap(context.TODO())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	maxFeePerGas = new(big.Int).Add(
+		maxPriorityFeePerGas,
+		new(big.Int).Mul(baseFee, big.NewInt(2)),
+	)
+
+	if maxFeePerGas.Cmp(maxPriorityFeePerGas) < 0 {
+		return nil, nil, fmt.Errorf("maxFeePerGas (%v) < maxPriorityFeePerGas (%v)", maxFeePerGas, maxPriorityFeePerGas)
+	}
+
+	// Check we aren't exceeding our limit
+	if maxFeePerGas.Cmp(c.maxGasPrice) == 1 {
+		maxPriorityFeePerGas.Sub(c.maxGasPrice, baseFee)
+		maxFeePerGas = c.maxGasPrice
+	}
+	return maxPriorityFeePerGas, maxFeePerGas, nil
 }
 
 func multiplyGasPrice(gasEstimate *big.Int, gasMultiplier *big.Float) *big.Int {
