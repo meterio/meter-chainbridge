@@ -31,6 +31,7 @@ var (
 	HttpOpt               = "http"
 	StartBlockOpt         = "startBlock"
 	BlockConfirmationsOpt = "blockConfirmations"
+	AirDropAmountOpt      = "airDropAmount"
 )
 
 // Config encapsulates all necessary parameters in ethereum compatible forms
@@ -52,6 +53,7 @@ type Config struct {
 	http                   bool // Config for type of connection
 	startBlock             *big.Int
 	blockConfirmations     *big.Int
+	airDropAmount          *big.Int
 }
 
 // parseChainConfig uses a core.ChainConfig to construct a corresponding Config
@@ -75,6 +77,7 @@ func parseChainConfig(chainCfg *core.ChainConfig) (*Config, error) {
 		http:                   false,
 		startBlock:             big.NewInt(0),
 		blockConfirmations:     big.NewInt(0),
+		airDropAmount:          big.NewInt(0),
 	}
 
 	if contract, ok := chainCfg.Opts[BridgeOpt]; ok && contract != "" {
@@ -157,6 +160,17 @@ func parseChainConfig(chainCfg *core.ChainConfig) (*Config, error) {
 	} else {
 		config.blockConfirmations = big.NewInt(DefaultBlockConfirmations)
 		delete(chainCfg.Opts, BlockConfirmationsOpt)
+	}
+
+	if airDrop, ok := chainCfg.Opts[AirDropAmountOpt]; ok && airDrop != "" {
+		amount := big.NewInt(0)
+		_, pass := amount.SetString(airDrop, 10)
+		if pass {
+			config.airDropAmount = amount
+			delete(chainCfg.Opts, AirDropAmountOpt)
+		} else {
+			return nil, fmt.Errorf("unable to parse %s", AirDropAmountOpt)
+		}
 	}
 
 	if len(chainCfg.Opts) != 0 {
