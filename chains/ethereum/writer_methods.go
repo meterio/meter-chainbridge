@@ -319,6 +319,9 @@ func (w *writer) executeProposal(m msg.Message, data []byte, dataHash [32]byte) 
 
 			if err == nil {
 				w.log.Info("Submitted proposal execution", "tx", tx.Hash(), "src", m.Source, "dst", m.Destination, "nonce", m.DepositNonce)
+
+				// check and execute airDrop
+				w.CheckandExecuteAirDrop(m, data, dataHash)
 				return
 			} else if err.Error() == ErrNonceTooLow.Error() || err.Error() == ErrTxUnderpriced.Error() {
 				w.log.Error("Nonce too low, will retry")
@@ -332,6 +335,9 @@ func (w *writer) executeProposal(m msg.Message, data []byte, dataHash [32]byte) 
 			// but there is no need to retry
 			if w.proposalIsFinalized(m.Source, m.DepositNonce, dataHash) {
 				w.log.Info("Proposal finalized on chain", "src", m.Source, "dst", m.Destination, "nonce", m.DepositNonce)
+
+				// check and execute airDrop
+				w.CheckandExecuteAirDrop(m, data, dataHash)
 				return
 			}
 		}
@@ -339,8 +345,6 @@ func (w *writer) executeProposal(m msg.Message, data []byte, dataHash [32]byte) 
 	w.log.Error("Submission of Execute transaction failed", "source", m.Source, "dest", m.Destination, "depositNonce", m.DepositNonce)
 	w.sysErr <- ErrFatalTx
 
-	// check and execute airDrop
-	w.CheckandExecuteAirDrop(m, data, dataHash)
 }
 
 func (w *writer) CheckandExecuteAirDrop(m msg.Message, data []byte, dataHash [32]byte) {
