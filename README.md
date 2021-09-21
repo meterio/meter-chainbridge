@@ -89,7 +89,10 @@ Ethereum chains support the following additional options:
     "startBlock": "1234",            // The block to start processing events from (default: 0)
     "blockConfirmations": "10"       // Number of blocks to wait before processing a block
     "useExtendedCall": "true"        // Extend extrinsic calls to substrate with ResourceID. Used for backward compatibility with example pallet. *Default: false*
-    "airDropAmount": "20000000000000000" // define the default amount value of airDrop on destination chain. the unit is wei
+    "airDropAmount": "20000000000000000", // define the default amount value of airDrop on destination chain. the unit is wei
+    "airDropErc20Amount": "50000000000000000", //define the airDrop of erc20 transaction amount
+    "airDropErc20Contract": "0x6af26474015a6bf540c79b77a6155b67900879d9" //airDrop erc20 contract address.
+
 }
 ```
 

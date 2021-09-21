@@ -21,17 +21,19 @@ const DefaultGasMultiplier = 1
 
 // Chain specific options
 var (
-	BridgeOpt             = "bridge"
-	Erc20HandlerOpt       = "erc20Handler"
-	Erc721HandlerOpt      = "erc721Handler"
-	GenericHandlerOpt     = "genericHandler"
-	MaxGasPriceOpt        = "maxGasPrice"
-	GasLimitOpt           = "gasLimit"
-	GasMultiplier         = "gasMultiplier"
-	HttpOpt               = "http"
-	StartBlockOpt         = "startBlock"
-	BlockConfirmationsOpt = "blockConfirmations"
-	AirDropAmountOpt      = "airDropAmount"
+	BridgeOpt               = "bridge"
+	Erc20HandlerOpt         = "erc20Handler"
+	Erc721HandlerOpt        = "erc721Handler"
+	GenericHandlerOpt       = "genericHandler"
+	MaxGasPriceOpt          = "maxGasPrice"
+	GasLimitOpt             = "gasLimit"
+	GasMultiplier           = "gasMultiplier"
+	HttpOpt                 = "http"
+	StartBlockOpt           = "startBlock"
+	BlockConfirmationsOpt   = "blockConfirmations"
+	AirDropAmountOpt        = "airDropAmount"
+	AirDropErc20ContractOpt = "airDropErc20Contract"
+	AirDropErc20AmountOpt   = "airDropErc20Amount"
 )
 
 // Config encapsulates all necessary parameters in ethereum compatible forms
@@ -54,6 +56,8 @@ type Config struct {
 	startBlock             *big.Int
 	blockConfirmations     *big.Int
 	airDropAmount          *big.Int
+	airDropErc20Contract   common.Address
+	airDropErc20Amount     *big.Int
 }
 
 // parseChainConfig uses a core.ChainConfig to construct a corresponding Config
@@ -78,6 +82,8 @@ func parseChainConfig(chainCfg *core.ChainConfig) (*Config, error) {
 		startBlock:             big.NewInt(0),
 		blockConfirmations:     big.NewInt(0),
 		airDropAmount:          big.NewInt(0),
+		airDropErc20Contract:   utils.ZeroAddress,
+		airDropErc20Amount:     big.NewInt(0),
 	}
 
 	if contract, ok := chainCfg.Opts[BridgeOpt]; ok && contract != "" {
@@ -170,6 +176,20 @@ func parseChainConfig(chainCfg *core.ChainConfig) (*Config, error) {
 			delete(chainCfg.Opts, AirDropAmountOpt)
 		} else {
 			return nil, fmt.Errorf("unable to parse %s", AirDropAmountOpt)
+		}
+	}
+
+	config.airDropErc20Contract = common.HexToAddress(chainCfg.Opts[AirDropErc20ContractOpt])
+	delete(chainCfg.Opts, AirDropErc20ContractOpt)
+
+	if airDropErc20, ok := chainCfg.Opts[AirDropErc20AmountOpt]; ok && airDropErc20 != "" {
+		amount := big.NewInt(0)
+		_, pass := amount.SetString(airDropErc20, 10)
+		if pass {
+			config.airDropErc20Amount = amount
+			delete(chainCfg.Opts, AirDropErc20AmountOpt)
+		} else {
+			return nil, fmt.Errorf("unable to parse %s", AirDropErc20AmountOpt)
 		}
 	}
 

@@ -5,6 +5,7 @@ package ethereum
 
 import (
 	"github.com/ChainSafe/ChainBridge/bindings/Bridge"
+	"github.com/ChainSafe/ChainBridge/bindings/ERC20"
 	"github.com/ChainSafe/chainbridge-utils/core"
 	metrics "github.com/ChainSafe/chainbridge-utils/metrics/types"
 	"github.com/ChainSafe/chainbridge-utils/msg"
@@ -19,13 +20,14 @@ var TransferredStatus uint8 = 3
 var CancelledStatus uint8 = 4
 
 type writer struct {
-	cfg            Config
-	conn           Connection
-	bridgeContract *Bridge.Bridge // instance of bound receiver bridgeContract
-	log            log15.Logger
-	stop           <-chan int
-	sysErr         chan<- error // Reports fatal error to core
-	metrics        *metrics.ChainMetrics
+	cfg                  Config
+	conn                 Connection
+	bridgeContract       *Bridge.Bridge // instance of bound receiver bridgeContract
+	log                  log15.Logger
+	stop                 <-chan int
+	sysErr               chan<- error // Reports fatal error to core
+	metrics              *metrics.ChainMetrics
+	airDropErc20Contract *ERC20.ERC20
 }
 
 // NewWriter creates and returns writer
@@ -48,6 +50,11 @@ func (w *writer) start() error {
 // setContract adds the bound receiver bridgeContract to the writer
 func (w *writer) setContract(bridge *Bridge.Bridge) {
 	w.bridgeContract = bridge
+}
+
+// setContract adds the bound receiver bridgeContract to the writer
+func (w *writer) setAirdropErc20Contract(contract *ERC20.ERC20) {
+	w.airDropErc20Contract = contract
 }
 
 // ResolveMessage handles any given message based on type
