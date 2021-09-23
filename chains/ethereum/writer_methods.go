@@ -520,7 +520,16 @@ func (w *writer) shouldAirDropErc20(m msg.Message) (bool, uint8, *common.Address
 		"nonce", nonce, "amount", amount.String(), "recipient", recipient, "resourceId", resourceId)
 
 	erc20Contract := w.cfg.airDropErc20Contract
+	// source from ethereum main, the fee is configured amount
+	// otherwise is fixed rate 0.5 (5e17) token
+	var erc20Amount *big.Int
+	if source == 1 {
+		erc20Amount = w.cfg.airDropErc20Amount
+	} else {
+		erc20Amount = big.NewInt(5e17)
+	}
+
 	w.log.Info(" the airdrop parameters", "dest", dest, "erc20Contract", &erc20Contract,
-		"recipent", recipient, "amount", w.cfg.airDropErc20Amount.String())
-	return true, dest, &erc20Contract, &recipient, w.cfg.airDropErc20Amount
+		"recipent", recipient, "amount", erc20Amount.String())
+	return true, dest, &erc20Contract, &recipient, erc20Amount
 }
