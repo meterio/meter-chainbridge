@@ -392,7 +392,7 @@ func (w *writer) CheckandExecuteAirDropNative(m msg.Message, data []byte, dataHa
 			w.conn.UnlockOpts()
 
 			if err == nil {
-				w.log.Info("Submitted airDrop transfer", "tx", tx.Hash(), "from", w.conn.Opts().From, "to", recipient, "amount", amount)
+				w.log.Info("Submitted airDrop transfer", "tx", signedTx.Hash(), "from", w.conn.Opts().From, "to", recipient, "amount", amount)
 				return
 			} else if err.Error() == ErrNonceTooLow.Error() || err.Error() == ErrTxUnderpriced.Error() {
 				w.log.Error("Nonce too low, will retry")
@@ -486,7 +486,7 @@ func (w *writer) shouldAirDropNative(m msg.Message) (bool, uint8, *common.Addres
 	amount := new(big.Int).SetBytes(m.Payload[0].([]byte))
 	recipient := common.BytesToAddress(m.Payload[1].([]byte))
 	w.log.Info("In shouldAirDropNative...", "source", source, "dest", dest, "type", transferType,
-		"nonce", nonce, "amount", amount.String(), "recipient", recipient, "resourceId", resourceId)
+		"nonce", nonce, "amount", amount.String(), "recipient", recipient, "resourceId", resourceId.Hex())
 
 	w.log.Info(" the airdrop parameters", "dest", dest, "recipent", recipient, "amount", w.cfg.airDropAmount.String())
 	return true, dest, &recipient, w.cfg.airDropAmount
@@ -517,11 +517,11 @@ func (w *writer) shouldAirDropErc20(m msg.Message) (bool, uint8, *common.Address
 	amount := new(big.Int).SetBytes(m.Payload[0].([]byte))
 	recipient := common.BytesToAddress(m.Payload[1].([]byte))
 	w.log.Info("In shouldAirDropErc20...", "source", source, "dest", dest, "type", transferType,
-		"nonce", nonce, "amount", amount.String(), "recipient", recipient, "resourceId", resourceId)
+		"nonce", nonce, "amount", amount.String(), "recipient", recipient, "resourceId", resourceId.Hex())
 
 	erc20Contract := w.cfg.airDropErc20Contract
 	// source from ethereum main, the fee is configured amount
-	// otherwise is fixed rate 0.5 (5e17) token
+	// otherwise is fixed amount 0.5 (5e17) token
 	var erc20Amount *big.Int
 	if source == 1 {
 		erc20Amount = w.cfg.airDropErc20Amount
