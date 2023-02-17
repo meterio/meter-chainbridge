@@ -10,5 +10,6 @@ require (
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/ethereum/go-ethereum v1.10.6
 	github.com/prometheus/client_golang v1.10.0
-	github.com/urfave/cli/v2 v2.3.0
+	github.com/stretchr/testify v1.7.0
+	github.com/urfave/cli/v2 v2.24.4
 )
